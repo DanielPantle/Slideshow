@@ -36,9 +36,10 @@ namespace Slideshow
         public MainWindow()
         {
             InitializeComponent();
-
-            jm = new JsonManager();
             im = new ImageManager();
+
+            // Farbe der TitleTextBox setzen
+            TitleTextBox.Foreground = Brushes.White;
         }
 
         private void ChooseDirectory_Click(object sender, RoutedEventArgs e)
@@ -56,7 +57,7 @@ namespace Slideshow
                 rootPath = folderBrowserDialog.SelectedPath;
 
                 // jsonFile einlesen
-                jm.SetPath(rootPath);
+                jm = new JsonManager(rootPath);
                 jm.ReadFile();
 
                 Console.WriteLine(rootPath);
@@ -92,6 +93,12 @@ namespace Slideshow
             image.Source = im.Get(paths[currentIndex]);
 
             TitleTextBox.Text = jm.GetTitle(relativePaths[currentIndex]);
+
+			// Nächstes Bild im Hintergrund laden
+			if (currentIndex < paths.Count - 1)
+			{
+				im.Preload(paths[currentIndex + 1]);
+			}
         }
 
         private void Window_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
@@ -107,28 +114,41 @@ namespace Slideshow
                     ShowPreviousImage();
                     break;
                 case Key.S:
-                    // Speichern
-                    jm.SaveToFile();
-                    System.Windows.MessageBox.Show("Datei gespeichert.");
+                    if(jm != null && e.OriginalSource != TitleTextBox)
+                    {
+                        // Speichern und Nachricht ausgeben
+                        //(wenn s nicht in TextBox geschrieben wurde)
+                        jm.SaveToFile(true);
+                    }
                     break;
                 case Key.T:
-                    // Titel setzen
-                    TitleTextBox.IsReadOnly = false;
-                    TitleTextBox.IsEnabled = true;
-                    TitleTextBox.Focus();
+                    if (jm != null)
+                    {
+                        // Titel setzen
+                        e.Handled = true;
+                        EnableTitleTextBox();
+                        TitleTextBox.Focus();
+                        TitleTextBox.SelectAll();
+                    }
                     break;
                 case Key.F5:
-                    Visibility = Visibility.Collapsed;
-                    WindowStyle = WindowStyle.None;
-                    ResizeMode = ResizeMode.NoResize;
-                    WindowState = WindowState.Maximized;
-                    Topmost = true;
-                    Visibility = Visibility.Visible;
+                    // Vollbild-Modus
+                    SetFullscreenMode(true);
                     break;
                 case Key.Escape:
-                    WindowStyle = WindowStyle.SingleBorderWindow;
-                    ResizeMode = ResizeMode.CanResize;
-                    Topmost = false;
+                    // Vollbild-Modus beenden
+                    SetFullscreenMode(false);
+                    break;
+                case Key.Oem1:
+                    if (jm != null)
+                    {
+                        // Titel übernehmen
+                        e.Handled = true;
+                        EnableTitleTextBox();
+                        TitleTextBox.Focus();
+                        TitleTextBox.Text = jm.GetTitle(relativePaths[currentIndex - 1]);
+                        TitleTextBox.SelectAll();
+                    }
                     break;
             }
         }
@@ -139,16 +159,58 @@ namespace Slideshow
             {
                 case Key.Enter:
                     string text = TitleTextBox.Text;
-                    Console.WriteLine(text);
-                    TitleTextBox.IsReadOnly = true;
-                    TitleTextBox.IsEnabled = false;
-                    jm.setTitle(relativePaths[currentIndex], text);
+                    DisableTitleTextBox();
+                    jm.SaveTitle(relativePaths[currentIndex], text);
                     break;
                 case Key.Escape:
                     TitleTextBox.Text = jm.GetTitle(relativePaths[currentIndex]);
-                    TitleTextBox.IsReadOnly = true;
-                    TitleTextBox.IsEnabled = false;
+                    DisableTitleTextBox();
                     break;
+            }
+        }
+
+        private void EnableTitleTextBox()
+        {
+            TitleTextBox.IsReadOnly = false;
+            TitleTextBox.IsEnabled = true;
+        }
+
+        private void DisableTitleTextBox()
+        {
+            TitleTextBox.IsReadOnly = true;
+            TitleTextBox.IsEnabled = false;
+        }
+
+        private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            // Fenster wird geschossen
+            if(jm != null && jm.UnsavedChanges)
+            {
+                MessageBoxResult result = System.Windows.MessageBox.Show("Willst du deine Einstellungen speichern?", "Einstellungen speichern", MessageBoxButton.YesNo);
+                if(result == MessageBoxResult.Yes)
+                {
+                    jm.SaveToFile(false);
+                }
+            }
+        }
+
+
+        private void SetFullscreenMode(bool fullscreenMode)
+        {
+            if (fullscreenMode)
+            {
+                Visibility = Visibility.Collapsed;
+                WindowStyle = WindowStyle.None;
+                ResizeMode = ResizeMode.NoResize;
+                WindowState = WindowState.Maximized;
+                Topmost = true;
+                Visibility = Visibility.Visible;
+            }
+            else
+            {
+                WindowStyle = WindowStyle.SingleBorderWindow;
+                ResizeMode = ResizeMode.CanResize;
+                Topmost = false;
             }
         }
     }

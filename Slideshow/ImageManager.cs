@@ -13,7 +13,12 @@ namespace Slideshow
 {
     class ImageManager
     {
-        private Dictionary<string, Image> images = new Dictionary<string, Image>();
+        private Dictionary<string, BitmapImage> images = new Dictionary<string, BitmapImage>();
+
+
+        private string preloadedImagePath;
+        private BitmapImage preloadedImage;
+
 
         public BitmapImage Get(string path)
         {
@@ -24,50 +29,48 @@ namespace Slideshow
         {
             lock (images)
             {
-                if(!images.ContainsKey(path) && File.Exists(path))
+                if (preloadedImagePath == path && preloadedImage != null)
                 {
+                    return preloadedImage;
                 }
-                //return RotateImage(images[path]);
-                //return new BitmapImage(new Uri(path));
-                return RotateImage(path);
+                else
+                {
+                    BitmapImage image = new BitmapImage();
+                    image = new BitmapImage();
+                    image.CacheOption = BitmapCacheOption.OnLoad;
+                    image.BeginInit();
+                    image.UriSource = new Uri(path);
+                    image.EndInit();
+                    return RotateImage(image, path);
+                }
             }
         }
 
-        private BitmapImage RotateImage(string path)
+        private BitmapImage RotateImage(BitmapImage image, string path)
         {
-            BitmapImage image = new BitmapImage();
-            image.BeginInit();
-            image.UriSource = new Uri(path);
 
-            string _orientationQuery = "System.Photo.Orientation";
+            //Bild anhand der EXIF-Daten drehen
+
             using (FileStream fileStream = new FileStream(path, FileMode.Open, FileAccess.Read))
             {
-                BitmapFrame bitmapFrame = BitmapFrame.Create(fileStream, BitmapCreateOptions.DelayCreation, BitmapCacheOption.None);
-                BitmapMetadata bitmapMetadata = bitmapFrame.Metadata as BitmapMetadata;
-                
-                if ((bitmapMetadata != null) && (bitmapMetadata.ContainsQuery(_orientationQuery)))
+                if ((BitmapFrame.Create(fileStream, BitmapCreateOptions.DelayCreation, BitmapCacheOption.None).Metadata is BitmapMetadata bitmapMetadata) && (bitmapMetadata.ContainsQuery("System.Photo.Orientation")) && (bitmapMetadata.GetQuery("System.Photo.Orientation") is ushort orientation))
                 {
-                    object orientation = bitmapMetadata.GetQuery(_orientationQuery);
-
-                    if (orientation != null)
+					Console.WriteLine("rotate: " + orientation);
+                    switch (orientation)
                     {
-                        switch ((ushort) orientation)
-                        {
-                            case 6:
-                                image.Rotation = Rotation.Rotate90;
-                                break;
-                            case 3:
-                                image.Rotation = Rotation.Rotate180;
-                                break;
-                            case 8:
-                                image.Rotation = Rotation.Rotate270;
-                                break;
-                        }
+                        case 6:
+                            image.Rotation = Rotation.Rotate90;
+                            break;
+                        case 3:
+                            image.Rotation = Rotation.Rotate180;
+                            break;
+                        case 8:
+                            image.Rotation = Rotation.Rotate270;
+                            break;
                     }
                 }
             }
 
-            image.EndInit();
             return image;
         }
         
@@ -76,7 +79,17 @@ namespace Slideshow
             foreach(string path in paths)
             {
                 BackgroundWorker bw = new BackgroundWorker();
-                bw.DoWork += (s, e) => { Load(path); };
+                bw.DoWork += (s, e) =>
+                {
+                    preloadedImage = new BitmapImage();
+                    preloadedImage.CacheOption = BitmapCacheOption.OnLoad;
+                    preloadedImage.BeginInit();
+                    preloadedImage.UriSource = new Uri(path);
+					preloadedImage = RotateImage(preloadedImage, path);
+					preloadedImage.EndInit();
+                    preloadedImage.Freeze();
+                    preloadedImagePath = path;
+                };
                 bw.RunWorkerAsync();
             }
         }
