@@ -9,10 +9,11 @@
         KeyDown="Window_KeyDown"
         Closing="Window_Closing">
     <Grid>
-        <Image Margin="0" Name="image"/>
+        <Image Margin="0" x:Name="image"/>
 
-        <Button Content="Ordner auswählen" HorizontalAlignment="Center" VerticalAlignment="Center" Name="ChooseDirectoryButton" Click="ChooseDirectory_Click"/>
-        <TextBox Foreground="White" BorderThickness="0" Background="Transparent" KeyDown="TitleTextBox_KeyDown" Name="TitleTextBox" HorizontalAlignment="Center" Margin="0,0,0,50" TextWrapping="Wrap" VerticalAlignment="Bottom" TextAlignment="Right" IsEnabled="False" IsReadOnly="True" FontSize="48"/>
+        <Button Content="Ordner auswählen" HorizontalAlignment="Center" VerticalAlignment="Center" x:Name="ChooseDirectoryButton" Click="ChooseDirectory_Click"/>
+        <TextBox Foreground="White" Opacity="1" BorderThickness="0" Background="Transparent" KeyDown="TitleTextBox_KeyDown" x:Name="TitleTextBox" HorizontalAlignment="Right" Margin="0,0,230,50" TextWrapping="Wrap" VerticalAlignment="Bottom" TextAlignment="Right" IsEnabled="False" IsReadOnly="True" FontSize="48"/>
+        <Label Content="" Foreground="Black" HorizontalAlignment="Left" Margin="230,10,0,0" VerticalAlignment="Top" Height="77" Width="300" x:Name="DatumLabel"  FontSize="22" />
 
     </Grid>
 </Window>

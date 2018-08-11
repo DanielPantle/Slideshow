@@ -55,7 +55,6 @@ namespace Slideshow
             {
                 if ((BitmapFrame.Create(fileStream, BitmapCreateOptions.DelayCreation, BitmapCacheOption.None).Metadata is BitmapMetadata bitmapMetadata) && (bitmapMetadata.ContainsQuery("System.Photo.Orientation")) && (bitmapMetadata.GetQuery("System.Photo.Orientation") is ushort orientation))
                 {
-					Console.WriteLine("rotate: " + orientation);
                     switch (orientation)
                     {
                         case 6:
@@ -87,7 +86,15 @@ namespace Slideshow
                     preloadedImage.UriSource = new Uri(path);
 					preloadedImage = RotateImage(preloadedImage, path);
 					preloadedImage.EndInit();
-                    preloadedImage.Freeze();
+                    try
+                    {
+                        preloadedImage.Freeze();
+                    }
+                    catch (System.InvalidOperationException ex)
+                    {
+                        Console.WriteLine("InvalidOperationException: " + ex.Message);
+                    }
+
                     preloadedImagePath = path;
                 };
                 bw.RunWorkerAsync();

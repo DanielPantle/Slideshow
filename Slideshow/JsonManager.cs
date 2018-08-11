@@ -41,6 +41,8 @@ namespace Slideshow
             stream.WriteLine(JsonConvert.SerializeObject(json));
             stream.Close();
 
+            UnsavedChanges = false;
+
             if (showMessage)
             {
                 // Nachricht ausgeben
@@ -51,7 +53,7 @@ namespace Slideshow
         public string GetTitle(string path)
         {
             //if(json.ContainsKey(path))
-            if(json[path] is JToken j)
+            if(json[path] is JToken j && j["t"] != null)
             {
                 return j["t"].ToString();
             }
@@ -65,7 +67,15 @@ namespace Slideshow
         {
             if(json[path] is JToken j)
             {
-                if (j["t"].ToString() != title)
+                if (j["t"] != null)
+                {
+                    if (j["t"].ToString() != title)
+                    {
+                        UnsavedChanges = true;
+                        j["t"] = title;
+                    }
+                }
+                else
                 {
                     UnsavedChanges = true;
                     j["t"] = title;
@@ -76,6 +86,48 @@ namespace Slideshow
                 UnsavedChanges = true;
                 JObject o = new JObject();
                 o.Add("t", title);
+                json[path] = o;
+            }
+        }
+
+        internal bool GetDisabled(string path)
+        {
+            if(json[path] is JToken j && j["d"] != null)
+            {
+                return (int)j["d"] == 1;
+            }
+            else
+            {
+                return false;
+            }
+        }
+
+        internal void SetDisabled(string path, bool disabled)
+        {
+            if (json[path] is JToken j && j["d"] != null)
+            {
+                if((int)j["d"] == 1)
+                {
+                    if (!disabled)
+                    {
+                        UnsavedChanges = true;
+                        j["d"] = 0;
+                    }
+                }
+                else
+                {
+                    if(disabled)
+                    {
+                        UnsavedChanges = true;
+                        j["d"] = 1;
+                    }
+                }
+            }
+            else if(disabled)
+            {
+                UnsavedChanges = true;
+                JObject o = new JObject();
+                o.Add("d", 1);
                 json[path] = o;
             }
         }

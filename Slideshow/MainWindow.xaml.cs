@@ -22,7 +22,7 @@ namespace Slideshow
     /// </summary>
     public partial class MainWindow : Window
     {
-        public static readonly List<string> imageExtensions = new List<string> { ".JPG", ".JPE", ".BMP", ".GIF", ".PNG" };
+        public static readonly List<string> imageExtensions = new List<string> { ".JPG", ".jpg", ".JPE", ".BMP", ".GIF", ".PNG" };
 
         private string rootPath;
 
@@ -49,7 +49,7 @@ namespace Slideshow
 
             // Vorauswahl
             folderBrowserDialog.RootFolder = Environment.SpecialFolder.Desktop;
-            folderBrowserDialog.SelectedPath = "D:\\Bilder\\2018\\Suedamerika";
+            folderBrowserDialog.SelectedPath = "D:\\Bilder\\03_Suedamerika";
 
             if (folderBrowserDialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
             {
@@ -78,27 +78,42 @@ namespace Slideshow
         {
             int indexBefore = currentIndex;
             currentIndex = currentIndex >= paths.Count - 1 ? 0 : ++currentIndex;
-            ShowImage();
+            if(!ShowImage())
+            {
+                ShowNextImage();
+            }
         }
 
         private void ShowPreviousImage()
         {
             int indexBefore = currentIndex;
             currentIndex = currentIndex <= 0 ? paths.Count - 1 : --currentIndex;
-            ShowImage();
+            if(!ShowImage())
+            {
+                ShowPreviousImage();
+            }
         }
 
-        private void ShowImage()
+        private bool ShowImage()
         {
+            if(jm.GetDisabled(relativePaths[currentIndex]))
+            {
+                return false;
+            }
             image.Source = im.Get(paths[currentIndex]);
 
             TitleTextBox.Text = jm.GetTitle(relativePaths[currentIndex]);
 
-			// Nächstes Bild im Hintergrund laden
-			if (currentIndex < paths.Count - 1)
+            string d = relativePaths[currentIndex].Split('/').First();
+            DatumLabel.Content = d.Split('-')[2] + "." + d.Split('-')[1] + "." + d.Split('-')[0];
+
+            // Nächstes Bild im Hintergrund laden
+            if (currentIndex < paths.Count - 1)
 			{
 				im.Preload(paths[currentIndex + 1]);
 			}
+
+            return true;
         }
 
         private void Window_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
@@ -122,7 +137,7 @@ namespace Slideshow
                     }
                     break;
                 case Key.T:
-                    if (jm != null)
+                    if (jm != null && e.OriginalSource != TitleTextBox && jm != null)
                     {
                         // Titel setzen
                         e.Handled = true;
@@ -130,6 +145,9 @@ namespace Slideshow
                         TitleTextBox.Focus();
                         TitleTextBox.SelectAll();
                     }
+                    break;
+                case Key.D:
+                    jm.SetDisabled(relativePaths[currentIndex], !jm.GetDisabled(relativePaths[currentIndex]));
                     break;
                 case Key.F5:
                     // Vollbild-Modus
@@ -139,15 +157,25 @@ namespace Slideshow
                     // Vollbild-Modus beenden
                     SetFullscreenMode(false);
                     break;
-                case Key.Oem1:
-                    if (jm != null)
+                case Key.Oem1: // Ü
+                    if (jm != null && e.OriginalSource != TitleTextBox && jm != null)
                     {
                         // Titel übernehmen
                         e.Handled = true;
-                        EnableTitleTextBox();
-                        TitleTextBox.Focus();
-                        TitleTextBox.Text = jm.GetTitle(relativePaths[currentIndex - 1]);
-                        TitleTextBox.SelectAll();
+                        int indexLastImageWithTitle = currentIndex - 1;
+                        while(String.IsNullOrWhiteSpace(jm.GetTitle(relativePaths[indexLastImageWithTitle])))
+                        {
+                            indexLastImageWithTitle--;
+                            Console.WriteLine("___ " + currentIndex + ":" + indexLastImageWithTitle);
+                        }
+                        Console.WriteLine("indexLast: " + indexLastImageWithTitle + ", " + jm.GetTitle(relativePaths[indexLastImageWithTitle]));
+                        for (int i = currentIndex; i >= indexLastImageWithTitle; i--)
+                        {
+                            jm.SaveTitle(relativePaths[i], jm.GetTitle(relativePaths[indexLastImageWithTitle]));
+                            Console.WriteLine("do: " + currentIndex + ":" + indexLastImageWithTitle);
+                        }
+
+                        TitleTextBox.Text = jm.GetTitle(relativePaths[currentIndex]);
                     }
                     break;
             }
